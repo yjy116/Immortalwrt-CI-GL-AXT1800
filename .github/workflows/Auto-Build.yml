@@ -1,7 +1,8 @@
 name: Auto-Build
 
 on:
-  # 每 10 天 00:00（新加坡/北京时间，UTC+8）自动执行
+  # 每 10 天 00:00（北京时间，UTC+8）自动执行
+  # GitHub Actions 的 schedule 使用 UTC；16:00 UTC = 北京时间次日 00:00
   schedule:
     - cron: "0 16 */10 * *"
   # 仍支持手动触发
