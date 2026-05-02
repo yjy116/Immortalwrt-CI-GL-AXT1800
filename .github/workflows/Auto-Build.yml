@@ -1,9 +1,9 @@
 name: Auto-Build
 
 on:
-  # 每天 00:00（新加坡/北京时间，UTC+8）自动执行
+  # 每 10 天 00:00（新加坡/北京时间，UTC+8）自动执行
   schedule:
-    - cron: "0 16 * * *"
+    - cron: "0 16 */10 * *"
   # 仍支持手动触发
   workflow_dispatch:
 
@@ -61,8 +61,8 @@ jobs:
 
   # 第三步：如果有更新，再触发 AXT1800.yml 执行正式编译
   trigger_build:
-    needs: clean
-    if: needs.check_updates.outputs.should_build == 'true'
+    needs: [check_updates, clean]
+    if: needs.check_updates.outputs.should_build == 'true' && needs.clean.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch AXT1800 workflow
