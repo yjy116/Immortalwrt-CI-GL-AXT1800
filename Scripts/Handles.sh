@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (C) 2026 VIKINGYFY
 
 PKG_PATH="$GITHUB_WORKSPACE/wrt/package/"
 
@@ -73,6 +75,26 @@ fi
 
 #修改qca-nss-drv启动顺序
 # Make luci-app-fancontrol tolerate missing sysfs files on first boot
+if [ -d *"luci-app-aurora-config"* ]; then
+	echo " "
+
+	cd ./luci-app-aurora-config/
+
+	sed -i "s/nav_submenu_type '.*'/nav_submenu_type 'boxed-dropdown'/g" $(find ./root/usr/share/aurora/ -type f -name "*.template")
+
+	cd $PKG_PATH && echo "theme-aurora has been fixed!"
+fi
+
+if [ -d *"luci-app-mini-diskmanager"* ]; then
+	echo " "
+
+	cd ./luci-app-mini-diskmanager/
+
+	sed -i "s/services/system/g" ./luci-app-mini-diskmanager/root/usr/share/luci/menu.d/luci-app-mini-diskmanager.json
+
+	cd $PKG_PATH && echo "mini-diskmanager has been fixed!"
+fi
+
 FAN_JS_FILES=$(find . ../feeds -type f -wholename "*/luci-app-fancontrol/htdocs/luci-static/resources/view/fancontrol.js" 2>/dev/null)
 if [ -n "$FAN_JS_FILES" ]; then
 	echo " "
