@@ -3,6 +3,7 @@
 # Copyright (C) 2026 VIKINGYFY
 
 SING_BOX_VERSION="1.12.25"
+SING_BOX_HASH="881435f07b5ab8170ccf3cb69e87130759521dc0ed1ae4bfeacbe7772a93a158"
 
 #安装和更新软件包
 UPDATE_PACKAGE() {
@@ -128,7 +129,13 @@ UPDATE_VERSION() {
 PIN_VERSION() {
 	local PKG_NAME=$1
 	local FIXED_VER=$2
+	local FIXED_HASH=$3
 	local PKG_FILES=$(find ./ ../feeds/packages/ -maxdepth 3 -type f -wholename "*/$PKG_NAME/Makefile")
+
+	if ! [[ "$FIXED_HASH" =~ ^[a-f0-9]{64}$ ]]; then
+		echo "$PKG_NAME fixed hash is invalid!"
+		return 1
+	fi
 
 	if [ -z "$PKG_FILES" ]; then
 		echo "$PKG_NAME not found!"
@@ -138,35 +145,14 @@ PIN_VERSION() {
 	echo -e "\n$PKG_NAME version pin has started!"
 
 	for PKG_FILE in $PKG_FILES; do
-		local OLD_URL=$(grep -Po "PKG_SOURCE_URL:=\K.*" "$PKG_FILE")
-		local OLD_FILE=$(grep -Po "PKG_SOURCE:=\K.*" "$PKG_FILE")
-
-		if [ -z "$OLD_URL" ] || [ -z "$OLD_FILE" ]; then
-			echo "$PKG_FILE source metadata is incomplete!"
-			return 1
-		fi
-
-		local PKG_URL=$([[ "$OLD_URL" == *"releases"* ]] && echo "${OLD_URL%/}/$OLD_FILE" || echo "${OLD_URL%/}")
-		local NEW_URL=$(echo $PKG_URL | sed "s/\$(PKG_VERSION)/$FIXED_VER/g; s/\$(PKG_NAME)/$PKG_NAME/g")
-		local TMP_FILE=$(mktemp)
-
-		curl -fsSL "$NEW_URL" -o "$TMP_FILE"
-		local NEW_HASH=$(sha256sum "$TMP_FILE" | cut -d ' ' -f 1)
-		rm -f "$TMP_FILE"
-
-		if ! [[ "$NEW_HASH" =~ ^[a-f0-9]{64}$ ]]; then
-			echo "$PKG_FILE failed to calculate hash for $FIXED_VER!"
-			return 1
-		fi
-
 		sed -i "s/PKG_VERSION:=.*/PKG_VERSION:=$FIXED_VER/g" "$PKG_FILE"
-		sed -i "s/PKG_HASH:=.*/PKG_HASH:=$NEW_HASH/g" "$PKG_FILE"
+		sed -i "s/PKG_HASH:=.*/PKG_HASH:=$FIXED_HASH/g" "$PKG_FILE"
 
-		echo "$PKG_FILE pinned to $FIXED_VER $NEW_HASH"
+		echo "$PKG_FILE pinned to $FIXED_VER $FIXED_HASH"
 	done
 }
 
-PIN_VERSION "sing-box" "$SING_BOX_VERSION"
+PIN_VERSION "sing-box" "$SING_BOX_VERSION" "$SING_BOX_HASH"
 # UPDATE_VERSION "tailscale"
 
 #寮曞叆绉佹湁鎵╁睍鑴氭湰
