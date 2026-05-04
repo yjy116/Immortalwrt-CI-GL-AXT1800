@@ -53,6 +53,15 @@ if [ -d *"luci-app-mini-diskmanager"* ]; then
 	cd $PKG_PATH && echo "mini-diskmanager has been fixed!"
 fi
 
+# Fix standalone luci-app-iperf3 include path when cloned into package/
+if [ -f "./luci-app-iperf3/Makefile" ]; then
+	echo " "
+
+	sed -i 's#include ../../luci.mk#include $(TOPDIR)/feeds/luci/luci.mk#g' ./luci-app-iperf3/Makefile
+
+	cd $PKG_PATH && echo "luci-app-iperf3 has been fixed!"
+fi
+
 # Make luci-app-fancontrol tolerate missing sysfs files on first boot
 FAN_JS_FILES=$(find . ../feeds -type f -wholename "*/luci-app-fancontrol/htdocs/luci-static/resources/view/fancontrol.js" 2>/dev/null)
 if [ -n "$FAN_JS_FILES" ]; then
