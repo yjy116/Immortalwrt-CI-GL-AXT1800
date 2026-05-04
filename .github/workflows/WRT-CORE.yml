@@ -64,6 +64,50 @@ jobs:
       - name: Checkout Projects
         uses: actions/checkout@main
 
+      - name: Free Runner Disk Space
+        run: |
+          set -euxo pipefail
+
+          echo "Disk space before cleanup:"
+          df -h
+
+          if swapon --show --noheadings | grep -q .; then
+            sudo swapoff -a
+          else
+            echo "No active swap found."
+          fi
+
+          for DIR in \
+            /mnt/swapfile \
+            /usr/share/dotnet \
+            /usr/local/lib/android \
+            /usr/local/share/boost \
+            /usr/local/share/powershell \
+            /usr/local/.ghcup \
+            /opt/ghc \
+            /opt/az \
+            /opt/microsoft \
+            /opt/google \
+            /opt/hostedtoolcache
+          do
+            if [ -e "$DIR" ]; then
+              sudo rm -rf "$DIR"
+            else
+              echo "Skip missing path: $DIR"
+            fi
+          done
+
+          if command -v docker >/dev/null 2>&1; then
+            sudo docker system prune -af --volumes
+          else
+            echo "Docker is not installed."
+          fi
+
+          sudo -E apt-get clean
+
+          echo "Disk space after cleanup:"
+          df -h
+
       - name: Initialization Environment
         env:
           DEBIAN_FRONTEND: noninteractive
