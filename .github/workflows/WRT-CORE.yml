@@ -161,7 +161,7 @@ jobs:
       - name: Restore Caches
         id: restore-cache
         if: env.WRT_TEST != 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
           restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}
@@ -225,7 +225,7 @@ jobs:
 
       - name: Save Build Caches
         if: env.WRT_TEST != 'true' && steps.restore-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
           path: |
