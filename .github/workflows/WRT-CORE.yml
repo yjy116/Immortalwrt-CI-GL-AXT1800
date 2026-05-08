@@ -40,9 +40,6 @@ on:
       WRT_TEST:
         required: false
         type: boolean
-      WRT_CACHE_ONLY:
-        required: false
-        type: boolean
 
 env:
   GITHUB_TOKEN: ${{secrets.PAT}}
@@ -58,7 +55,6 @@ env:
   WRT_SOURCE: ${{inputs.WRT_SOURCE}}
   WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
   WRT_TEST: ${{inputs.WRT_TEST}}
-  WRT_CACHE_ONLY: ${{inputs.WRT_CACHE_ONLY}}
 
 jobs:
   core:
@@ -158,16 +154,26 @@ jobs:
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
-      - name: Restore Caches
-        id: restore-cache
+      - name: Restore Download Cache
+        id: restore-dl-cache
         if: env.WRT_TEST != 'true'
         uses: actions/cache/restore@v5
         with:
-          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
-          restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-${{env.WRT_HASH}}
+          restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-
+          path: ./wrt/dl
+
+      - name: Restore Build Caches
+        id: restore-build-cache
+        if: env.WRT_TEST != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-build-${{env.WRT_HASH}}
+          restore-keys: |
+            ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-build-
+            ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-
           path: |
             ./wrt/.ccache
-            ./wrt/dl
             ./wrt/staging_dir/host*
             ./wrt/staging_dir/tool*
 
@@ -215,7 +221,7 @@ jobs:
           make defconfig -j$(nproc) && make clean -j$(nproc)
 
       - name: Warm Build Caches
-        if: env.WRT_TEST != 'true' && steps.restore-cache.outputs.cache-hit != 'true'
+        if: env.WRT_TEST != 'true' && steps.restore-build-cache.outputs.cache-hit != 'true'
         run: |
           cd ./wrt/
 
@@ -224,18 +230,17 @@ jobs:
           make target/linux/compile -j$(nproc)
 
       - name: Save Build Caches
-        if: env.WRT_TEST != 'true' && steps.restore-cache.outputs.cache-hit != 'true'
+        if: env.WRT_TEST != 'true' && steps.restore-build-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
-          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-build-${{env.WRT_HASH}}
           path: |
             ./wrt/.ccache
-            ./wrt/dl
             ./wrt/staging_dir/host*
             ./wrt/staging_dir/tool*
 
       - name: Download Packages
-        if: env.WRT_TEST != 'true' && env.WRT_CACHE_ONLY != 'true'
+        if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
           
@@ -247,8 +252,16 @@ jobs:
           
           make download -j$(nproc)
 
+      - name: Save Download Cache
+        if: env.WRT_TEST != 'true' && steps.restore-dl-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        continue-on-error: true
+        with:
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-${{env.WRT_HASH}}
+          path: ./wrt/dl
+
       - name: Compile Firmware
-        if: env.WRT_TEST != 'true' && env.WRT_CACHE_ONLY != 'true'
+        if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
 
@@ -274,7 +287,6 @@ jobs:
           echo "======================="
 
       - name: Package Firmware
-        if: env.WRT_CACHE_ONLY != 'true'
         run: |
           cd ./wrt/ && mkdir ./upload/
 
@@ -299,7 +311,6 @@ jobs:
           fi
 
       - name: Release Firmware
-        if: env.WRT_CACHE_ONLY != 'true'
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}
