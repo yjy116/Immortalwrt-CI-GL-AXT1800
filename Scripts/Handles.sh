@@ -50,7 +50,6 @@ if [ -d *"luci-app-mini-diskmanager"* ]; then
 
 	MDM_MENU="./luci-app-mini-diskmanager/root/usr/share/luci/menu.d/luci-app-mini-diskmanager.json"
 	sed -i "s/services/system/g" "$MDM_MENU"
-	sed -i 's/"acl": \[ "luci-app-mini-diskmanager" \],/"acl": [ "luci-app-mini-diskmanager" ]/g; /"uci": { "fstab": true }/d' "$MDM_MENU"
 
 	cd $PKG_PATH && echo "mini-diskmanager has been fixed!"
 fi
