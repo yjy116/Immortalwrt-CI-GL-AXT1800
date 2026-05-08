@@ -40,6 +40,9 @@ on:
       WRT_TEST:
         required: false
         type: boolean
+      WRT_CACHE_ONLY:
+        required: false
+        type: boolean
 
 env:
   GITHUB_TOKEN: ${{secrets.PAT}}
@@ -55,6 +58,7 @@ env:
   WRT_SOURCE: ${{inputs.WRT_SOURCE}}
   WRT_PACKAGE: ${{inputs.WRT_PACKAGE}}
   WRT_TEST: ${{inputs.WRT_TEST}}
+  WRT_CACHE_ONLY: ${{inputs.WRT_CACHE_ONLY}}
 
 jobs:
   core:
@@ -154,15 +158,16 @@ jobs:
         run: |
           find ./ -maxdepth 3 -type f -iregex ".*\(txt\|sh\)$" -exec dos2unix {} \; -exec chmod +x {} \;
 
-      - name: Check Caches
-        id: check-cache
+      - name: Restore Caches
+        id: restore-cache
         if: env.WRT_TEST != 'true'
-        uses: actions/cache@main
+        uses: actions/cache/restore@v4
         with:
           key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
           restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}
           path: |
             ./wrt/.ccache
+            ./wrt/dl
             ./wrt/staging_dir/host*
             ./wrt/staging_dir/tool*
 
@@ -179,15 +184,6 @@ jobs:
             echo "toolchain skiped done!"
           else
             echo "caches missed!"
-          fi
-
-          if ${{steps.check-cache.outputs.cache-hit != 'true'}}; then
-            CACHE_LIST=$(gh cache list --key "$WRT_CONFIG-$WRT_INFO" | cut -f 1)
-            for CACHE_KEY in $CACHE_LIST; do
-              gh cache delete $CACHE_KEY
-            done
-
-            echo "caches cleanup done!"
           fi
 
       - name: Update Feeds
@@ -218,8 +214,28 @@ jobs:
 
           make defconfig -j$(nproc) && make clean -j$(nproc)
 
+      - name: Warm Build Caches
+        if: env.WRT_TEST != 'true' && steps.restore-cache.outputs.cache-hit != 'true'
+        run: |
+          cd ./wrt/
+
+          make tools/install -j$(nproc)
+          make toolchain/install -j$(nproc)
+          make target/linux/compile -j$(nproc)
+
+      - name: Save Build Caches
+        if: env.WRT_TEST != 'true' && steps.restore-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_HASH}}
+          path: |
+            ./wrt/.ccache
+            ./wrt/dl
+            ./wrt/staging_dir/host*
+            ./wrt/staging_dir/tool*
+
       - name: Download Packages
-        if: env.WRT_TEST != 'true'
+        if: env.WRT_TEST != 'true' && env.WRT_CACHE_ONLY != 'true'
         run: |
           cd ./wrt/
           
@@ -232,7 +248,7 @@ jobs:
           make download -j$(nproc)
 
       - name: Compile Firmware
-        if: env.WRT_TEST != 'true'
+        if: env.WRT_TEST != 'true' && env.WRT_CACHE_ONLY != 'true'
         run: |
           cd ./wrt/
 
@@ -258,6 +274,7 @@ jobs:
           echo "======================="
 
       - name: Package Firmware
+        if: env.WRT_CACHE_ONLY != 'true'
         run: |
           cd ./wrt/ && mkdir ./upload/
 
@@ -282,6 +299,7 @@ jobs:
           fi
 
       - name: Release Firmware
+        if: env.WRT_CACHE_ONLY != 'true'
         uses: softprops/action-gh-release@master
         with:
           tag_name: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-${{env.WRT_BRANCH}}-${{env.WRT_DATE}}

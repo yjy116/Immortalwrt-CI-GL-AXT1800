@@ -15,6 +15,11 @@ on:
         default: 'false'
         required: false
         type: boolean
+      CACHE_ONLY:
+        description: 'Only warm and save build caches, skip firmware compile and release.'
+        default: 'false'
+        required: false
+        type: boolean
 
 #CI权限
 permissions: write-all
@@ -59,3 +64,5 @@ jobs:
       WRT_PACKAGE: ${{inputs.PACKAGE}}
       #仅输出配置文件
       WRT_TEST: ${{inputs.TEST}}
+      #Cache warm only
+      WRT_CACHE_ONLY: ${{inputs.CACHE_ONLY}}
