@@ -44,16 +44,6 @@ if [ -d *"luci-app-aurora-config"* ]; then
 	cd $PKG_PATH && echo "theme-aurora has been fixed!"
 fi
 
-#修改mini-diskmanager菜单位置
-if [ -d *"luci-app-mini-diskmanager"* ]; then
-	echo " " && cd ./luci-app-mini-diskmanager/
-
-	MDM_MENU="./luci-app-mini-diskmanager/root/usr/share/luci/menu.d/luci-app-mini-diskmanager.json"
-	sed -i "s/services/system/g" "$MDM_MENU"
-
-	cd $PKG_PATH && echo "mini-diskmanager has been fixed!"
-fi
-
 # Fix standalone luci-app-iperf3 include path when cloned into package/
 if [ -f "./luci-app-iperf3/Makefile" ]; then
 	echo " "
