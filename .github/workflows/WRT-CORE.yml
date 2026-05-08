@@ -159,7 +159,7 @@ jobs:
         if: env.WRT_TEST != 'true'
         uses: actions/cache/restore@v5
         with:
-          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-${{env.WRT_HASH}}
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-${{github.sha}}
           restore-keys: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-
           path: ./wrt/dl
 
@@ -257,7 +257,7 @@ jobs:
         uses: actions/cache/save@v5
         continue-on-error: true
         with:
-          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-${{env.WRT_HASH}}
+          key: ${{env.WRT_CONFIG}}-${{env.WRT_INFO}}-dl-${{github.sha}}
           path: ./wrt/dl
 
       - name: Compile Firmware
