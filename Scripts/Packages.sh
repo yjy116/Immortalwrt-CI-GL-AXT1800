@@ -64,7 +64,7 @@ UPDATE_PACKAGE "luci-app-tailscale" "asvow/luci-app-tailscale" "main"
 
 UPDATE_PACKAGE "ddns-go" "sirpdboy/luci-app-ddns-go" "main"
 UPDATE_PACKAGE "diskman" "sbwml/luci-app-diskman" "main"
-UPDATE_PACKAGE "diskmanager" "4IceG/luci-app-mini-diskmanager" "main"
+UPDATE_PACKAGE "luci-app-mini-diskmanager" "4IceG/luci-app-mini-diskmanager" "main"
 UPDATE_PACKAGE "easytier" "EasyTier/luci-app-easytier" "main"
 UPDATE_PACKAGE "luci-app-iperf3" "Gevatter-Tod/luci-app-iperf3" "main"
 # UPDATE_PACKAGE "fancontrol" "rockjake/luci-app-fancontrol" "main"
