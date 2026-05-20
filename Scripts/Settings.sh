@@ -77,6 +77,24 @@ if [[ "${WRT_TARGET^^}" == *"QUALCOMMAX"* ]]; then
 	echo "CONFIG_FEED_sqm_scripts_nss=n" >> ./.config
 	#设置NSS版本
 	echo "CONFIG_NSS_FIRMWARE_VERSION_12_5=y" >> ./.config
+	# Explicitly keep NSS/ECM and WiFi offload runtime modules in qualcommax builds.
+	cat <<'EOF' >> ./.config
+CONFIG_ATH11K_NSS_SUPPORT=y
+CONFIG_ATH11K_MEM_PROFILE_512M=y
+CONFIG_PACKAGE_MAC80211_NSS_SUPPORT=y
+CONFIG_NSS_DRV_WIFIOFFLOAD_ENABLE=y
+CONFIG_NSS_DRV_WIFI_EXT_VDEV_ENABLE=y
+CONFIG_PACKAGE_kmod-nss-ifb=y
+CONFIG_PACKAGE_kmod-qca-nss-drv=y
+CONFIG_PACKAGE_kmod-qca-nss-dp=y
+CONFIG_PACKAGE_kmod-qca-nss-ecm=y
+CONFIG_PACKAGE_kmod-qca-ssdk=y
+CONFIG_PACKAGE_kmod-qca-nss-drv-pppoe=y
+CONFIG_PACKAGE_kmod-qca-nss-drv-qdisc=y
+CONFIG_PACKAGE_kmod-qca-nss-drv-bridge-mgr=y
+CONFIG_PACKAGE_kmod-qca-nss-drv-vlan-mgr=y
+CONFIG_PACKAGE_kmod-qca-nss-drv-map-t=y
+EOF
 	#其他调整
 	echo "CONFIG_PACKAGE_kmod-usb-serial-qualcomm=y" >> ./.config
 
