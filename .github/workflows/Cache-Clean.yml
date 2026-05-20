@@ -2,17 +2,6 @@ name: Cache-Clean
 
 on:
   workflow_dispatch:
-    inputs:
-      DRY_RUN:
-        description: "Preview only. Set false to delete matching caches."
-        default: true
-        required: true
-        type: boolean
-      KEY_PREFIX:
-        description: "Delete caches whose keys start with this prefix."
-        default: "AXT1800-"
-        required: true
-        type: string
 
 permissions:
   actions: write
@@ -20,25 +9,19 @@ permissions:
 
 jobs:
   clean:
-    name: Clean build caches
+    name: Clean AXT1800 caches
     runs-on: ubuntu-latest
     steps:
-      - name: List or delete matching caches
+      - name: Delete AXT1800 project caches
         env:
           GH_TOKEN: ${{ github.token }}
-          DRY_RUN: ${{ inputs.DRY_RUN }}
-          KEY_PREFIX: ${{ inputs.KEY_PREFIX }}
+          KEY_PREFIX: AXT1800-
         shell: bash
         run: |
           set -euo pipefail
 
-          if [ -z "$KEY_PREFIX" ]; then
-            echo "::error::KEY_PREFIX cannot be empty."
-            exit 1
-          fi
-
           caches="$RUNNER_TEMP/caches.json"
-          gh cache list --key "$KEY_PREFIX" --limit 100 \
+          gh cache list --key "$KEY_PREFIX" --limit 1000 \
             --json id,key,sizeInBytes,lastAccessedAt \
             > "$caches"
 
@@ -49,8 +32,8 @@ jobs:
           {
             echo "## Cache clean"
             echo
+            echo "- Target: \`AXT1800 project caches\`"
             echo "- Prefix: \`$KEY_PREFIX\`"
-            echo "- Dry run: \`$DRY_RUN\`"
             echo "- Matching caches: \`$count\`"
             echo "- Matching size: \`$size_mib MiB\`"
             echo
@@ -64,12 +47,9 @@ jobs:
             exit 0
           fi
 
-          if [ "$DRY_RUN" = "true" ]; then
-            echo "Dry run only. Re-run with DRY_RUN=false to delete these caches."
-            exit 0
-          fi
-
           jq -r '.[].id' "$caches" | while read -r cache_id; do
             echo "Deleting cache id: $cache_id"
             gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${cache_id}" >/dev/null
           done
+
+          echo "Deleted $count cache(s), about $size_mib MiB."

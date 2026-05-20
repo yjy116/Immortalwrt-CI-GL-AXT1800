@@ -3,21 +3,21 @@
 
 ## GitHub Actions Cache 清理
 
-一般不需要定期清理 cache。只有缓存占满、保存新缓存失败，或者改过缓存策略时，才手动跑一次。
+一般不需要定期清理 cache。只有这些情况才建议手动跑一次：
 
-本仓库提供 `Cache-Clean` workflow：
+- 上游源码或 feeds 大幅变更，旧缓存可能拖慢或干扰新构建。
+- 缓存疑似污染，反复出现 tools、toolchain、staging 相关异常。
+- GitHub Actions cache 空间异常、接近配额，或者保存新缓存失败。
 
-- `DRY_RUN=true`：默认值，只列出会清理的缓存，不删除。
-- `DRY_RUN=false`：删除匹配缓存。
-- `KEY_PREFIX=AXT1800-`：只处理这个前缀的缓存，避免误删其它缓存。
+本仓库的 `Cache-Clean` workflow 是一键清理：手动运行后会直接删除所有 `AXT1800-` 前缀缓存，不需要填写参数。它只清本项目缓存，不清 GitHub Release、源码仓库或云端数据。
 
 使用步骤：
 
 1. 进入 GitHub 仓库的 `Actions` 页面。
 2. 选择 `Cache-Clean` workflow。
 3. 点击 `Run workflow`。
-4. 先保持 `DRY_RUN=true` 看 Summary。
-5. 确认没问题后，再设置 `DRY_RUN=false` 删除。
+4. 点击绿色 `Run workflow` 即可。
+5. 在 Summary 查看清理数量和释放空间。
 
 ---
 云编译 GL.iNet AXT1800（Slate AX）固件｜OpenWrt / ImmortalWrt 自动化构建系统
