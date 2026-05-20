@@ -1,0 +1,126 @@
+name: Cache-Clean
+
+on:
+  workflow_dispatch:
+    inputs:
+      DRY_RUN:
+        description: "Preview deletions without removing caches."
+        default: true
+        required: true
+        type: boolean
+      KEEP_LATEST:
+        description: "Keep at least this many newest matching caches."
+        default: 8
+        required: true
+        type: number
+      MAX_AGE_DAYS:
+        description: "Only delete matching caches older than this many days."
+        default: 21
+        required: true
+        type: number
+      KEY_PREFIX:
+        description: "Only clean cache keys starting with this prefix."
+        default: "AXT1800-"
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  clean:
+    name: Clean stale caches
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clean stale GitHub Actions caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRY_RUN: ${{ inputs.DRY_RUN }}
+          KEEP_LATEST: ${{ inputs.KEEP_LATEST }}
+          MAX_AGE_DAYS: ${{ inputs.MAX_AGE_DAYS }}
+          KEY_PREFIX: ${{ inputs.KEY_PREFIX }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! [[ "$KEEP_LATEST" =~ ^[0-9]+$ ]]; then
+            echo "::error::KEEP_LATEST must be a non-negative integer."
+            exit 1
+          fi
+
+          if ! [[ "$MAX_AGE_DAYS" =~ ^[0-9]+$ ]]; then
+            echo "::error::MAX_AGE_DAYS must be a non-negative integer."
+            exit 1
+          fi
+
+          repo="$GITHUB_REPOSITORY"
+          cache_json="$RUNNER_TEMP/actions-caches.json"
+          candidates_json="$RUNNER_TEMP/cache-clean-candidates.json"
+          cutoff_epoch="$(date -u -d "${MAX_AGE_DAYS} days ago" +%s)"
+
+          gh api --paginate "repos/${repo}/actions/caches?per_page=100" \
+            --jq '.actions_caches[]' \
+            | jq -s '.' > "$cache_json"
+
+          jq \
+            --arg prefix "$KEY_PREFIX" \
+            --argjson keep "$KEEP_LATEST" \
+            --argjson cutoff "$cutoff_epoch" \
+            '
+              map(select(.key | startswith($prefix)))
+              | sort_by(.last_accessed_at // .created_at)
+              | reverse
+              | to_entries
+              | map(
+                  .value
+                  + {
+                      rank: (.key + 1),
+                      age_epoch: ((.last_accessed_at // .created_at) | fromdateiso8601)
+                    }
+                )
+              | map(select(.rank > $keep and .age_epoch < $cutoff))
+            ' "$cache_json" > "$candidates_json"
+
+          total_count="$(jq 'length' "$cache_json")"
+          matching_count="$(jq --arg prefix "$KEY_PREFIX" '[.[] | select(.key | startswith($prefix))] | length' "$cache_json")"
+          delete_count="$(jq 'length' "$candidates_json")"
+          delete_bytes="$(jq '[.[].size_in_bytes] | add // 0' "$candidates_json")"
+          delete_mib="$(awk -v bytes="$delete_bytes" 'BEGIN { printf "%.1f", bytes / 1024 / 1024 }')"
+
+          {
+            echo "## Cache clean summary"
+            echo
+            echo "- Repository: \`${repo}\`"
+            echo "- Prefix: \`${KEY_PREFIX}\`"
+            echo "- Dry run: \`${DRY_RUN}\`"
+            echo "- Keep latest: \`${KEEP_LATEST}\`"
+            echo "- Max age days: \`${MAX_AGE_DAYS}\`"
+            echo "- Total caches: \`${total_count}\`"
+            echo "- Matching caches: \`${matching_count}\`"
+            echo "- Deletion candidates: \`${delete_count}\`"
+            echo "- Candidate size: \`${delete_mib} MiB\`"
+            echo
+            echo "### Candidates"
+            echo
+            echo "| id | key | size MiB | last accessed | created |"
+            echo "| --- | --- | ---: | --- | --- |"
+            jq -r '.[] | "| \(.id) | `\(.key)` | \((.size_in_bytes / 1024 / 1024 * 10 | round) / 10) | \(.last_accessed_at) | \(.created_at) |"' "$candidates_json"
+          } | tee "$GITHUB_STEP_SUMMARY"
+
+          if [ "$delete_count" -eq 0 ]; then
+            echo "No stale matching caches to delete."
+            exit 0
+          fi
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run only. Re-run with DRY_RUN=false to delete the candidates."
+            exit 0
+          fi
+
+          jq -r '.[].id' "$candidates_json" | while read -r cache_id; do
+            echo "Deleting cache id: $cache_id"
+            gh api --method DELETE "repos/${repo}/actions/caches/${cache_id}" >/dev/null
+          done
+
+          echo "Deleted ${delete_count} stale cache(s), about ${delete_mib} MiB."
