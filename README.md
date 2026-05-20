@@ -3,32 +3,21 @@
 
 ## GitHub Actions Cache 清理
 
-GitHub Actions cache 会在仓库达到配额后自动按最近访问时间淘汰旧缓存。一般不需要频繁清理；只有在缓存接近配额、构建经常保存新缓存失败、或调整了缓存策略后，才建议手动清理。
+一般不需要定期清理 cache。只有缓存占满、保存新缓存失败，或者改过缓存策略时，才手动跑一次。
 
-本仓库提供 `.github/workflows/Cache-Clean.yml`，它是手动触发的安全清理流程：
+本仓库提供 `Cache-Clean` workflow：
 
-- 默认 `DRY_RUN=true`，只预览候选缓存，不删除。
-- 默认只匹配 `AXT1800-` 前缀，避免误删其它用途缓存。
-- 默认保留最近 `8` 个匹配缓存。
-- 默认只删除超过 `21` 天未访问的匹配缓存。
-- 清理结果会写入 workflow 的 Summary，包含候选缓存数量和预计释放空间。
+- `DRY_RUN=true`：默认值，只列出会清理的缓存，不删除。
+- `DRY_RUN=false`：删除匹配缓存。
+- `KEY_PREFIX=AXT1800-`：只处理这个前缀的缓存，避免误删其它缓存。
 
 使用步骤：
 
 1. 进入 GitHub 仓库的 `Actions` 页面。
 2. 选择 `Cache-Clean` workflow。
 3. 点击 `Run workflow`。
-4. 第一次保持 `DRY_RUN=true`，检查 Summary 中的候选列表。
-5. 确认候选列表无误后，再次运行并设置 `DRY_RUN=false` 执行删除。
-
-建议参数：
-
-| 参数 | 建议值 | 说明 |
-|------|--------|------|
-| `DRY_RUN` | `true` | 先预览，确认后再改为 `false` |
-| `KEEP_LATEST` | `8` | 至少保留最近 8 个匹配缓存 |
-| `MAX_AGE_DAYS` | `21` | 只清理 21 天前的旧缓存 |
-| `KEY_PREFIX` | `AXT1800-` | 限定只清理本项目缓存 |
+4. 先保持 `DRY_RUN=true` 看 Summary。
+5. 确认没问题后，再设置 `DRY_RUN=false` 删除。
 
 ---
 云编译 GL.iNet AXT1800（Slate AX）固件｜OpenWrt / ImmortalWrt 自动化构建系统
