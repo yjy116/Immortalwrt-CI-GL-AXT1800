@@ -243,13 +243,7 @@ jobs:
         if: env.WRT_TEST != 'true'
         run: |
           cd ./wrt/
-          
-          # 用户空间增加emmc解密脚本及rtl9303控制程序(GL AXT1800 NULL)
-          git clone https://github.com/yjy116/files
-          
-          # 赋予 files 目录下所有文件可执行权限
-          chmod -R +x files
-          
+
           make download -j$(nproc)
 
       - name: Save Download Cache
